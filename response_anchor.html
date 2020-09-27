@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="res-popup-container" class="res-popup-content"></div>
+
+
+<script>
+$(document).ready(function($) {
+    var
+        // 設定
+        selCommentContent = '.comment-listCon > p'  // コメント本文のjQueryセレクタ
+        , selComment      = '.comment'              // コメント1件全体のjQueryセレクタ
+        , strResAnchor    = '※|米'                 // コメレスアンカーの開始文字('|' で区切って複数指定可。特殊文字は '>' のように文字参照を使う)
+        , flagJump        = true    // コメレスアンカークリック時にジャンプ(true:する, false:しない)
+        , flagZenkaku     = true    // 全角数字もコメレスアンカーとして扱う(true:する, false:しない)
+
+        // その他変数
+        , reResAnchor        // コメレスアンカーにマッチする正規表現オブジェクト
+        , strResAnchorID     // コメレスアンカーの数字部分
+        , jqResAnchor        // コメレスアンカーのjQueryオブジェクト
+        , jqResTarget        // コメレスアンカー参照先のjQueryオブジェクト
+    ;
+
+    // 正規表現オブジェクトの生成
+    if (flagZenkaku) {
+        reResAnchor = new RegExp('(' + strResAnchor + ')((?:[0-9]+|[０-９]+))', 'g');
+    } else {
+        reResAnchor = new RegExp('(' + strResAnchor + ')([0-9]+)', 'g');
+    }
+
+    // コメント本文のレスアンカーをspan要素に置換(res-anchorクラスを付加)
+    $(selCommentContent).each(function() {
+        $(this).html(
+            $(this).html().replace(reResAnchor, function() {
+                if (flagZenkaku && /[０-９]+/.test(arguments[2])) {    // レスアンカーの数字を半角化
+                    strResAnchorID = arguments[2].replace(/[０-９]/g, function(match){
+                    return String.fromCharCode(match.charCodeAt(0)-0xFEE0);
+                    })
+                } else {
+                    strResAnchorID = arguments[2];
+                }
+                return '' + arguments[0] + '';
+            })
+        );
+    });
+
+    jqResAnchor = $('.res-anchor');    // コメレスアンカーのjQueryオブジェクトを取得
+    // コメレスアンカーのイベントにバインド
+    jqResAnchor.on({
+        'mousemove': function(eventObject) {
+            $('#res-popup-container').css({    // ポップアップコンテナの位置決め
+                'top':    eventObject.pageY + 10 + 'px'
+                , 'left': eventObject.pageX + 10 + 'px'
+            });
+        }
+        , 'mouseenter': function() {
+            jqResTarget = $(selComment).eq($(this).data('resid') - 1);    // 参照先のjQueryオブジェクトを取得
+            if (jqResTarget[0]) {    // 参照先が存在したら
+                $('#res-popup-container')         // ポップアップコンテナ
+                    .html(jqResTarget.html())       // 内容書き換え
+                    .addClass('res-popup-on')       // 表示
+                ;
+            }
+        }
+        , 'mouseleave': function() {
+            $('#res-popup-container')         // ポップアップコンテナ
+                .removeClass('res-popup-on')    // 非表示
+                .empty()                        // 内容削除
+            ;
+        }
+    });
+
+    if (flagJump) {
+        jqResAnchor.on('click', function() {
+            jqResTarget = $(selComment).eq($(this).data('resid') - 1);           // 参照先のjQueryオブジェクトを取得
+            if (jqResTarget[0]) {    // 参照先が存在したら
+                $('body, html').animate({scrollTop: jqResTarget.offset().top}, 50);  // スムーズスクロール
+            }
+        })
+    }
+});
+</script>
+<style>
+#res-popup-container {
+}
+
+/* ポップアップコンテナ初期表示（クラス） */
+.res-popup-content {
+    background: #f5f5f5;
+    border: 1px solid #c0c0c0;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.25);
+    display: none;
+    font-size: 75%;
+    padding: 1em;
+    position: absolute;
+    z-index: 10;
+}
+
+/* ポップアップコンテナ表示時 */
+.res-popup-on {
+    display: block;
+}
+
+/* レスアンカー */
+.res-anchor {
+    color: #00f;
+    text-decoration: underline;
+}
+</style>
+</body>
+</html>
